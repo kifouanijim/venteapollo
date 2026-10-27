@@ -9,7 +9,6 @@ const path = require("node:path");
 const { after, before, test } = require("node:test");
 
 const projectRoot = path.join(__dirname, "..");
-const staffToken = "test-staff-token-with-more-than-32-characters";
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "apollo-shop-test-"));
 const ordersFile = path.join(temporaryDirectory, "orders.json");
 const atomicOrdersFile = path.join(temporaryDirectory, "atomic-orders.json");
@@ -28,7 +27,6 @@ before(async () => {
     env: {
       ...process.env,
       PORT: "0",
-      STAFF_ACCESS_TOKEN: staffToken,
       STRIPE_SECRET_KEY: "",
       STRIPE_WEBHOOK_SECRET: "",
       ORDERS_FILE: ordersFile,
@@ -62,7 +60,7 @@ after(async () => {
   fs.rmSync(temporaryDirectory, { recursive: true, force: true });
 });
 
-test("sert les 31 articles sans exposer les prix staff", async () => {
+test("sert les 31 articles avec uniquement les données publiques", async () => {
   const response = await fetch(`${baseUrl}/api/products`);
   const body = await response.json();
   assert.equal(response.status, 200);
@@ -71,16 +69,13 @@ test("sert les 31 articles sans exposer les prix staff", async () => {
   assert.equal("staffPrice" in body.products[0], false);
 });
 
-test("protège les tarifs staff et les renvoie avec la clé d'accès", async () => {
-  const denied = await fetch(`${baseUrl}/api/products?staff=1`);
-  assert.equal(denied.status, 401);
-
-  const authorized = await fetch(`${baseUrl}/api/products?staff=1`, {
-    headers: { authorization: `Bearer ${staffToken}` },
-  });
-  const body = await authorized.json();
-  assert.equal(authorized.status, 200);
-  assert.equal(body.products[0].staffPrice, 500);
+test("sert le catalogue statique utilisé par la vitrine", async () => {
+  const response = await fetch(`${baseUrl}/products.json`);
+  const products = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(products.length, 31);
+  assert.equal(products[0].id, "apollo-silicone");
+  assert.equal(products.some((product) => "staffPrice" in product), false);
 });
 
 test("refuse un panier invalide et signale le paiement non configuré", async () => {
@@ -109,19 +104,6 @@ test("calcule les montants de commande depuis le catalogue, jamais depuis le nav
   });
   assert.equal(publicItems[0].unitAmount, 1500);
   assert.equal(publicItems[0].quantity, 2);
-
-  const previousToken = process.env.STAFF_ACCESS_TOKEN;
-  process.env.STAFF_ACCESS_TOKEN = staffToken;
-  try {
-    const staffItems = getOrderItems({
-      request: { headers: { authorization: `Bearer ${staffToken}` } },
-      items: [{ id: "bandes-35", quantity: 1 }],
-    });
-    assert.equal(staffItems[0].unitAmount, 1250);
-  } finally {
-    if (previousToken === undefined) delete process.env.STAFF_ACCESS_TOKEN;
-    else process.env.STAFF_ACCESS_TOKEN = previousToken;
-  }
 });
 
 test("préserve les commandes lors d'écritures simultanées", async () => {

@@ -8,7 +8,7 @@
       name="description"
       content="Retrouvez la sélection Apollo Sporting Club : équipement de boxe, textile et accessoires."
     >
-    <title>La boutique — Apollo Sporting Club</title>
+    <title>Apollo Sporting Club — Équipement & essentiels</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -31,23 +31,13 @@
       </a>
 
       <nav class="main-nav" aria-label="Navigation principale">
-        <a href="#boutique" class="nav-link nav-link-active">La boutique</a>
+        <a href="#boutique" class="nav-link nav-link-active">Nos essentiels</a>
         <a href="#boutique" class="nav-link" data-nav-category="Gants">Boxe</a>
         <a href="#boutique" class="nav-link" data-nav-category="Textile Apollo">Textile</a>
         <a href="#histoire" class="nav-link">Le club</a>
       </nav>
 
       <div class="header-actions">
-        <label class="member-switch" for="member-toggle">
-          <input id="member-toggle" type="checkbox">
-          <span class="switch-track" aria-hidden="true"></span>
-          <span class="member-label">Tarif staff</span>
-        </label>
-        <button class="cart-button" id="open-cart" type="button" aria-label="Ouvrir le panier">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.5a2 2 0 0 0 1.9-1.4L22 9H7M10 21h.01M18 21h.01"/></svg>
-          <span>Panier</span>
-          <span class="cart-count" id="cart-count">0</span>
-        </button>
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false">
           <span></span><span></span>
         </button>
@@ -55,13 +45,12 @@
     </header>
 
     <main>
-      <div class="checkout-banner" id="checkout-banner" role="status" aria-live="polite" hidden></div>
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> ÉQUIPEMENT OFFICIEL · PARIS</div>
           <h1 id="hero-title">PRÊT POUR<br>LE <span>PROCHAIN ROUND.</span></h1>
           <p>Du premier entraînement au dernier round. Les essentiels du club, choisis pour durer.</p>
-          <a href="#boutique" class="button button-dark">Découvrir la boutique <span aria-hidden="true">↘</span></a>
+          <a href="#boutique" class="button button-dark">Découvrir nos essentiels <span aria-hidden="true">↘</span></a>
           <div class="hero-footnote"><span class="hero-star">✳</span> Depuis 2010, on monte sur le ring ensemble.</div>
         </div>
         <div class="hero-art" aria-label="Illustration de gants de boxe Apollo">
@@ -98,7 +87,7 @@
             <div class="eyebrow"><span class="eyebrow-line"></span> LA SÉLECTION DU CLUB</div>
             <h2>TOUT CE QU’IL<br>FAUT <span>POUR Y ALLER.</span></h2>
           </div>
-          <p class="shop-intro">L’équipement pour l’entraînement, les jours de match et tous ceux entre les deux.</p>
+          <p class="shop-intro">Un aperçu de l’équipement et des essentiels disponibles au club. Pour les disponibilités, renseignez-vous directement auprès d’Apollo.</p>
         </div>
 
         <div class="catalog-toolbar">
@@ -112,7 +101,7 @@
         <p class="store-error" id="store-error" role="alert" hidden></p>
         <div class="catalog-meta">
           <p id="results-count" aria-live="polite"></p>
-          <p class="catalog-note"><span aria-hidden="true">✳</span> Prix affichés en euros, TTC</p>
+          <p class="catalog-note"><span aria-hidden="true">✳</span> Prix indicatifs, à confirmer auprès du club</p>
         </div>
 
         <div class="product-grid" id="product-grid" aria-live="polite"></div>
@@ -143,26 +132,5 @@
       <span>© APOLLO SPORTING CLUB</span>
     </footer>
 
-    <div class="cart-backdrop" id="cart-backdrop" hidden></div>
-    <aside class="cart-panel" id="cart-panel" aria-label="Votre panier" aria-hidden="true">
-      <div class="cart-header">
-        <div><p class="eyebrow"><span class="eyebrow-line"></span> VOTRE SÉLECTION</p><h2>LE PANIER <span id="cart-title-count">(0)</span></h2></div>
-        <button class="close-cart" id="close-cart" type="button" aria-label="Fermer le panier">×</button>
-      </div>
-      <div class="cart-items" id="cart-items"></div>
-      <div class="cart-empty" id="cart-empty">
-        <span aria-hidden="true">↗</span>
-        <h3>Il est encore un peu léger.</h3>
-        <p>Ajoutez votre premier essentiel Apollo.</p>
-        <button class="button button-dark" id="browse-products" type="button">Voir les articles <span aria-hidden="true">↘</span></button>
-      </div>
-      <div class="cart-footer" id="cart-footer" hidden>
-        <div class="cart-total"><span>Sous-total</span><strong id="cart-total">0 €</strong></div>
-        <p class="cart-disclaimer">Retrait gratuit au club. Les modalités vous seront communiquées après paiement.</p>
-        <button class="button button-dark checkout-button" id="checkout-button" type="button">Payer avec Stripe <span aria-hidden="true">↗</span></button>
-        <p class="checkout-notice" id="checkout-notice" role="status" hidden></p>
-      </div>
-    </aside>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

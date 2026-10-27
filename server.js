@@ -63,11 +63,6 @@ function staffAccessAllowed(request) {
   return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
 }
 
-function publicProduct(product, includeStaffPrice) {
-  const { staffPrice, ...publicFields } = product;
-  return includeStaffPrice ? { ...publicFields, staffPrice } : publicFields;
-}
-
 async function readJsonRequest(request) {
   const chunks = [];
   let size = 0;
@@ -158,7 +153,7 @@ function getOrderItems(payload) {
       productId: product.id,
       name: product.name,
       quantity: item.quantity,
-      unitAmount: staffAccessAllowed(payload.request) ? product.staffPrice : product.publicPrice,
+      unitAmount: product.publicPrice,
     };
   });
 }
@@ -247,12 +242,7 @@ async function handleRequest(request, response) {
   }
 
   if (pathname === "/api/products" && request.method === "GET") {
-    const includeStaffPrice = url.searchParams.get("staff") === "1";
-    if (includeStaffPrice && !staffAccessAllowed(request)) {
-      sendJson(response, 401, { error: "Une clé d'accès staff valide est requise." });
-      return;
-    }
-    sendJson(response, 200, { products: products.map((product) => publicProduct(product, includeStaffPrice)) });
+    sendJson(response, 200, { products });
     return;
   }
 
@@ -389,6 +379,7 @@ async function handleRequest(request, response) {
     ["index.html", ["text/html; charset=utf-8"]],
     ["styles.css", ["text/css; charset=utf-8"]],
     ["app.js", ["text/javascript; charset=utf-8"]],
+    ["products.json", ["application/json; charset=utf-8"]],
   ]);
   const file = allowedFiles.get(requestedFile);
   if (!file) {

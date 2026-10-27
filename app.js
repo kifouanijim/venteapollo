@@ -1,23 +1,13 @@
 let products = [];
 let categories = ["Tout voir"];
-const state = { category: "Tout voir", search: "", staff: false, staffToken: "", cart: new Map() };
+const state = { category: "Tout voir", search: "" };
 const numberFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
 const productGrid = document.querySelector("#product-grid");
 const categoryList = document.querySelector("#category-list");
 const searchInput = document.querySelector("#search-input");
-const memberToggle = document.querySelector("#member-toggle");
-const cartPanel = document.querySelector("#cart-panel");
-const cartBackdrop = document.querySelector("#cart-backdrop");
-const toast = document.querySelector("#toast");
-let toastTimeout;
-let checkoutInProgress = false;
 
 function formatPrice(price) {
   return `${numberFormat.format(price / 100)} €`;
-}
-
-function priceFor(product) {
-  return state.staff ? product.staffPrice : product.publicPrice;
 }
 
 function escapeHtml(value) {
@@ -30,20 +20,17 @@ function escapeHtml(value) {
   })[character]);
 }
 
-async function loadProducts(staffToken = "") {
-  const response = await fetch(`/api/products${staffToken ? "?staff=1" : ""}`, {
-    headers: staffToken ? { authorization: `Bearer ${staffToken}` } : {},
-  });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || "Le catalogue n'a pas pu être chargé.");
-  if (!Array.isArray(body.products)) throw new Error("Le catalogue retourné par le serveur est invalide.");
-  products = body.products;
+async function loadProducts() {
+  const response = await fetch(new URL("products.json", document.baseURI));
+  if (!response.ok) throw new Error("Le catalogue n'a pas pu être chargé.");
+  const catalog = await response.json();
+  if (!Array.isArray(catalog)) throw new Error("Le fichier products.json ne contient pas un catalogue valide.");
+  products = catalog;
   categories = ["Tout voir", ...new Set(products.map((product) => product.category))];
   if (!categories.includes(state.category)) state.category = "Tout voir";
   document.querySelector("#store-error").hidden = true;
   renderCategories();
   renderProducts();
-  renderCart();
 }
 
 function symbolFor(type) {
@@ -88,8 +75,6 @@ function renderProducts() {
   document.querySelector("#empty-state").hidden = visibleProducts.length > 0;
   productGrid.hidden = visibleProducts.length === 0;
   productGrid.innerHTML = visibleProducts.map((product, index) => {
-    const price = priceFor(product);
-    const showPreviousPrice = state.staff && product.publicPrice !== product.staffPrice;
     return `
       <article class="product-card">
         <div class="product-visual visual-${product.tone}">
@@ -99,39 +84,11 @@ function renderProducts() {
           <p class="product-category">${escapeHtml(product.category)}</p>
           <h3 class="product-name">${escapeHtml(product.name)}</h3>
         <div class="product-bottom">
-          <div class="product-price"><strong>${formatPrice(price)}</strong>${showPreviousPrice ? `<del>${formatPrice(product.publicPrice)}</del>` : ""}</div>
-          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="Ajouter ${escapeHtml(product.name)} au panier">+</button>
+          <span class="product-price">${formatPrice(product.publicPrice)}</span>
+          <span class="product-inquiry">Prix indicatif</span>
         </div>
       </article>`;
   }).join("");
-}
-
-function renderCart() {
-  const items = Array.from(state.cart.entries()).map(([id, quantity]) => ({
-    product: products.find((item) => item.id === id),
-    quantity,
-  })).filter((item) => item.product);
-  const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
-  const total = items.reduce((sum, item) => sum + priceFor(item.product) * item.quantity, 0);
-  document.querySelector("#cart-count").textContent = quantity;
-  document.querySelector("#cart-title-count").textContent = `(${quantity})`;
-  document.querySelector("#cart-total").textContent = formatPrice(total);
-  document.querySelector("#cart-empty").hidden = items.length > 0;
-  document.querySelector("#cart-footer").hidden = items.length === 0;
-  document.querySelector("#cart-items").innerHTML = items.map(({ product, quantity: itemQuantity }) => `
-    <div class="cart-item">
-      <div class="cart-item-art" aria-hidden="true">${product.art === "glove" ? "✳" : "A"}</div>
-      <div class="cart-item-info">
-        <strong>${escapeHtml(product.name)}</strong>
-        <span>${formatPrice(priceFor(product))} / article</span>
-        <div class="quantity-controls" aria-label="Quantité de ${product.name}">
-          <button type="button" data-quantity="${product.id}" data-change="-1" aria-label="Retirer un article">−</button>
-          <span>${itemQuantity}</span>
-          <button type="button" data-quantity="${product.id}" data-change="1" aria-label="Ajouter un article">+</button>
-        </div>
-      </div>
-      <span class="cart-item-price">${formatPrice(priceFor(product) * itemQuantity)}</span>
-    </div>`).join("");
 }
 
 function updateCategory(category) {
@@ -139,36 +96,6 @@ function updateCategory(category) {
   state.category = category;
   renderCategories();
   renderProducts();
-}
-
-function changeQuantity(id, change) {
-  const nextQuantity = (state.cart.get(id) || 0) + change;
-  if (nextQuantity <= 0) state.cart.delete(id);
-  else state.cart.set(id, nextQuantity);
-  renderCart();
-}
-
-function openCart() {
-  cartPanel.classList.add("is-open");
-  cartPanel.setAttribute("aria-hidden", "false");
-  cartBackdrop.hidden = false;
-  document.body.classList.add("cart-open");
-  document.querySelector("#close-cart").focus();
-}
-
-function closeCart() {
-  cartPanel.classList.remove("is-open");
-  cartPanel.setAttribute("aria-hidden", "true");
-  cartBackdrop.hidden = true;
-  document.body.classList.remove("cart-open");
-  document.querySelector("#open-cart").focus();
-}
-
-function showToast(message) {
-  toast.textContent = message;
-  toast.classList.add("is-visible");
-  window.clearTimeout(toastTimeout);
-  toastTimeout = window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
 }
 
 categoryList.addEventListener("click", (event) => {
@@ -184,102 +111,11 @@ document.querySelector(".main-nav").addEventListener("click", (event) => {
   document.querySelector("#menu-toggle").setAttribute("aria-expanded", "false");
 });
 
-productGrid.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-add]");
-  if (!button) return;
-  const product = products.find((item) => item.id === button.dataset.add);
-  if (!product) return;
-  changeQuantity(product.id, 1);
-  showToast(`${product.name} ajouté au panier`);
-});
-
-document.querySelector("#cart-items").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-quantity]");
-  if (button) changeQuantity(button.dataset.quantity, Number(button.dataset.change));
-});
-
 searchInput.addEventListener("input", () => {
   state.search = searchInput.value;
   renderProducts();
 });
 
-memberToggle.addEventListener("change", async () => {
-  if (!memberToggle.checked) {
-    state.staff = false;
-    state.staffToken = "";
-    try {
-      await loadProducts();
-      showToast("Tarifs publics affichés");
-    } catch (error) {
-      memberToggle.checked = true;
-      showToast(error.message);
-    }
-    return;
-  }
-
-  const token = window.prompt("Saisissez la clé d'accès staff fournie par le club.");
-  if (!token) {
-    memberToggle.checked = false;
-    return;
-  }
-
-  try {
-    state.staffToken = token.trim();
-    await loadProducts(state.staffToken);
-    state.staff = true;
-    renderProducts();
-    renderCart();
-    showToast("Tarifs staff activés");
-  } catch (error) {
-    state.staffToken = "";
-    state.staff = false;
-    memberToggle.checked = false;
-    showToast(error.message);
-  }
-});
-
-document.querySelector("#open-cart").addEventListener("click", openCart);
-document.querySelector("#close-cart").addEventListener("click", closeCart);
-cartBackdrop.addEventListener("click", closeCart);
-document.querySelector("#browse-products").addEventListener("click", () => {
-  closeCart();
-  document.querySelector("#boutique").scrollIntoView({ behavior: "smooth" });
-});
-document.querySelector("#checkout-button").addEventListener("click", async (event) => {
-  if (checkoutInProgress || state.cart.size === 0) return;
-  checkoutInProgress = true;
-  const button = event.currentTarget;
-  const notice = document.querySelector("#checkout-notice");
-  notice.hidden = true;
-  button.disabled = true;
-  button.firstChild.textContent = "Préparation du paiement… ";
-
-  try {
-    const response = await fetch("/api/checkout", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...(state.staffToken ? { authorization: `Bearer ${state.staffToken}` } : {}),
-      },
-      body: JSON.stringify({
-        items: Array.from(state.cart, ([id, quantity]) => ({ id, quantity })),
-      }),
-    });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || "La commande n'a pas pu être créée.");
-    if (typeof body.checkoutUrl !== "string" || !body.checkoutUrl.startsWith("https://checkout.stripe.com/")) {
-      throw new Error("Le lien de paiement retourné par Stripe n'est pas valide.");
-    }
-    window.location.assign(body.checkoutUrl);
-  } catch (error) {
-    notice.textContent = error.message;
-    notice.hidden = false;
-  } finally {
-    checkoutInProgress = false;
-    button.disabled = false;
-    button.firstChild.textContent = "Payer avec Stripe ";
-  }
-});
 document.querySelector("#reset-filters").addEventListener("click", () => {
   searchInput.value = "";
   state.search = "";
@@ -290,51 +126,9 @@ document.querySelector("#menu-toggle").addEventListener("click", (event) => {
   const isOpen = menu.classList.toggle("is-open");
   event.currentTarget.setAttribute("aria-expanded", String(isOpen));
 });
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && cartPanel.classList.contains("is-open")) closeCart();
-});
 
-renderCart();
 loadProducts().catch((error) => {
   const storeError = document.querySelector("#store-error");
-  storeError.textContent = `${error.message} Démarrez le serveur avec npm start, puis rechargez la page.`;
+  storeError.textContent = `${error.message} Vérifiez que products.json est publié à côté du site, puis rechargez la page.`;
   storeError.hidden = false;
 });
-
-async function showCheckoutResult() {
-  const currentUrl = new URL(window.location.href);
-  const result = currentUrl.searchParams.get("checkout");
-  if (!result) return;
-
-  const banner = document.querySelector("#checkout-banner");
-  banner.hidden = false;
-  if (result === "cancel") {
-    banner.textContent = "Paiement annulé. Votre panier est toujours disponible.";
-    banner.classList.add("checkout-banner-info");
-  } else if (result === "success") {
-    const sessionId = currentUrl.searchParams.get("session_id");
-    if (!sessionId) {
-      banner.textContent = "Votre paiement a été transmis. Si votre commande n'est pas confirmée, contactez le club.";
-      banner.classList.add("checkout-banner-info");
-    } else {
-      try {
-        const response = await fetch(`/api/checkout/status?session_id=${encodeURIComponent(sessionId)}`);
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || "Le statut du paiement ne peut pas être vérifié.");
-        banner.textContent = body.status === "paid"
-          ? "Paiement confirmé. Merci pour votre commande ! Le club vous contactera pour le retrait."
-          : "Votre paiement est en cours de confirmation. Le club vous contactera dès que la commande sera validée.";
-        banner.classList.add(body.status === "paid" ? "checkout-banner-success" : "checkout-banner-info");
-      } catch (error) {
-        banner.textContent = `Votre retour de paiement a bien été reçu, mais sa confirmation est indisponible : ${error.message}`;
-        banner.classList.add("checkout-banner-info");
-      }
-    }
-  }
-
-  currentUrl.searchParams.delete("checkout");
-  currentUrl.searchParams.delete("session_id");
-  window.history.replaceState({}, "", currentUrl);
-}
-
-showCheckoutResult();
