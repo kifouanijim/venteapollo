@@ -1,0 +1,13 @@
+{
+  "name": "apollo-sporting-club-shop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Boutique Apollo Sporting Club avec API Node et paiement Stripe Checkout",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
