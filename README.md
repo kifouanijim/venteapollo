@@ -15,7 +15,7 @@ Gardez `index.html`, `app.js`, `styles.css` et `products.json` à la racine du d
 
 Avec Node.js 20 ou plus récent, lancez `npm.cmd start` sous Windows puis ouvrez <http://127.0.0.1:3000>. Le serveur est utile pour un aperçu local; GitHub Pages héberge directement les fichiers statiques.
 
-La recherche et les filtres de catégories fonctionnent dans le navigateur. Les prix affichés sont indicatifs et doivent être confirmés auprès du club. Le site ne propose pas de panier, de commande ou de paiement en ligne.
+La recherche et les filtres de catégories fonctionnent dans le navigateur. Le panier est une démonstration locale : on peut y ajouter et retirer des articles, mais aucune commande ni aucun paiement n'est envoyé. Les prix affichés sont indicatifs et doivent être confirmés auprès du club.
 
 ## Modifier le catalogue
 

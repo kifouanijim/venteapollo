@@ -1,10 +1,12 @@
 let products = [];
 let categories = ["Tout voir"];
-const state = { category: "Tout voir", search: "" };
+const state = { category: "Tout voir", search: "", cart: new Map() };
 const numberFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
 const productGrid = document.querySelector("#product-grid");
 const categoryList = document.querySelector("#category-list");
 const searchInput = document.querySelector("#search-input");
+const cartPanel = document.querySelector("#cart-panel");
+const cartBackdrop = document.querySelector("#cart-backdrop");
 
 function formatPrice(price) {
   return `${numberFormat.format(price / 100)} €`;
@@ -31,6 +33,7 @@ async function loadProducts() {
   document.querySelector("#store-error").hidden = true;
   renderCategories();
   renderProducts();
+  renderCart();
 }
 
 function symbolFor(type) {
@@ -85,10 +88,63 @@ function renderProducts() {
           <h3 class="product-name">${escapeHtml(product.name)}</h3>
         <div class="product-bottom">
           <span class="product-price">${formatPrice(product.publicPrice)}</span>
-          <span class="product-inquiry">Prix indicatif</span>
+          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="Ajouter ${escapeHtml(product.name)} au panier de démonstration">+</button>
         </div>
       </article>`;
   }).join("");
+}
+
+function renderCart() {
+  const items = Array.from(state.cart.entries()).map(([id, quantity]) => ({
+    product: products.find((item) => item.id === id),
+    quantity,
+  })).filter((item) => item.product);
+  const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+  const total = items.reduce((sum, item) => sum + item.product.publicPrice * item.quantity, 0);
+
+  document.querySelector("#cart-count").textContent = itemCount;
+  document.querySelector("#cart-count").hidden = itemCount === 0;
+  document.querySelector("#cart-title-count").textContent = `(${itemCount})`;
+  document.querySelector("#cart-total").textContent = formatPrice(total);
+  document.querySelector("#cart-empty").hidden = items.length > 0;
+  document.querySelector("#cart-footer").hidden = items.length === 0;
+  document.querySelector("#cart-items").innerHTML = items.map(({ product, quantity }) => `
+    <article class="cart-item">
+      <div class="cart-item-art visual-${escapeHtml(product.tone)}" aria-hidden="true">${symbolFor(product.art)}</div>
+      <div class="cart-item-info">
+        <strong>${escapeHtml(product.name)}</strong>
+        <span>${formatPrice(product.publicPrice)} / article</span>
+        <div class="quantity-controls" aria-label="Quantité de ${escapeHtml(product.name)}">
+          <button type="button" data-quantity="${escapeHtml(product.id)}" data-change="-1" aria-label="Retirer un article">−</button>
+          <span>${quantity}</span>
+          <button type="button" data-quantity="${escapeHtml(product.id)}" data-change="1" aria-label="Ajouter un article">+</button>
+        </div>
+      </div>
+      <span class="cart-item-price">${formatPrice(product.publicPrice * quantity)}</span>
+    </article>`).join("");
+}
+
+function changeQuantity(id, change) {
+  const quantity = (state.cart.get(id) || 0) + change;
+  if (quantity <= 0) state.cart.delete(id);
+  else state.cart.set(id, quantity);
+  renderCart();
+}
+
+function openCart() {
+  cartPanel.classList.add("is-open");
+  cartPanel.setAttribute("aria-hidden", "false");
+  cartBackdrop.hidden = false;
+  document.body.classList.add("cart-open");
+  document.querySelector("#close-cart").focus();
+}
+
+function closeCart() {
+  cartPanel.classList.remove("is-open");
+  cartPanel.setAttribute("aria-hidden", "true");
+  cartBackdrop.hidden = true;
+  document.body.classList.remove("cart-open");
+  document.querySelector("#open-cart").focus();
 }
 
 function updateCategory(category) {
@@ -101,6 +157,27 @@ function updateCategory(category) {
 categoryList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-category]");
   if (button) updateCategory(button.dataset.category);
+});
+
+productGrid.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-add]");
+  if (button) changeQuantity(button.dataset.add, 1);
+});
+
+document.querySelector("#cart-items").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-quantity]");
+  if (button) changeQuantity(button.dataset.quantity, Number(button.dataset.change));
+});
+
+document.querySelector("#open-cart").addEventListener("click", openCart);
+document.querySelector("#close-cart").addEventListener("click", closeCart);
+cartBackdrop.addEventListener("click", closeCart);
+document.querySelector("#browse-products").addEventListener("click", () => {
+  closeCart();
+  document.querySelector("#boutique").scrollIntoView({ behavior: "smooth" });
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && cartPanel.classList.contains("is-open")) closeCart();
 });
 
 document.querySelector(".main-nav").addEventListener("click", (event) => {

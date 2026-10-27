@@ -38,6 +38,11 @@
       </nav>
 
       <div class="header-actions">
+        <button class="cart-button" id="open-cart" type="button" aria-label="Ouvrir le panier de démonstration" aria-controls="cart-panel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.5a2 2 0 0 0 1.9-1.4L22 9H7M10 21h.01M18 21h.01"/></svg>
+          <span>Panier</span>
+          <span class="cart-count" id="cart-count" hidden>0</span>
+        </button>
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false">
           <span></span><span></span>
         </button>
@@ -132,5 +137,28 @@
       <span>© APOLLO SPORTING CLUB</span>
     </footer>
 
+    <div class="cart-backdrop" id="cart-backdrop" hidden></div>
+    <aside class="cart-panel" id="cart-panel" aria-label="Panier de démonstration" aria-hidden="true">
+      <div class="cart-header">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> APERÇU DE LA BOUTIQUE</p>
+          <h2>LE PANIER <span id="cart-title-count">(0)</span></h2>
+        </div>
+        <button class="close-cart" id="close-cart" type="button" aria-label="Fermer le panier">×</button>
+      </div>
+      <p class="cart-demo-notice">Panier de démonstration — les commandes en ligne ne sont pas encore disponibles.</p>
+      <div class="cart-items" id="cart-items"></div>
+      <div class="cart-empty" id="cart-empty">
+        <span aria-hidden="true">↗</span>
+        <h3>Votre sélection commence ici.</h3>
+        <p>Ajoutez un article pour voir le panier.</p>
+        <button class="button button-dark" id="browse-products" type="button">Voir les essentiels <span aria-hidden="true">↘</span></button>
+      </div>
+      <div class="cart-footer" id="cart-footer" hidden>
+        <div class="cart-total"><span>Total indicatif</span><strong id="cart-total">0 €</strong></div>
+        <p class="cart-disclaimer">Le prix et la disponibilité sont à confirmer auprès du club.</p>
+        <button class="button button-disabled" type="button" disabled>Commande bientôt disponible</button>
+      </div>
+    </aside>
   </body>
 </html>
