@@ -1,6 +1,15 @@
 let products = [];
 let categories = ["Tout voir"];
-const state = { category: "Tout voir", search: "", cart: new Map() };
+const PAGE_SIZE = 12;
+const state = {
+  category: "Tout voir",
+  search: "",
+  sort: "featured",
+  page: 1,
+  favoritesOnly: false,
+  favorites: new Set(),
+  cart: new Map(),
+};
 const numberFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
 const productGrid = document.querySelector("#product-grid");
 const categoryList = document.querySelector("#category-list");
@@ -22,15 +31,33 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function loadFavorites() {
+  try {
+    const storedFavorites = localStorage.getItem("apollo-favorites");
+    if (!storedFavorites) return new Set();
+    const favoriteIds = JSON.parse(storedFavorites);
+    if (!Array.isArray(favoriteIds) || favoriteIds.some((id) => typeof id !== "string")) {
+      throw new Error("Le format des favoris enregistrés n’est pas valide.");
+    }
+    return new Set(favoriteIds.filter((id) => products.some((product) => product.id === id)));
+  } catch (error) {
+    const storeError = document.querySelector("#store-error");
+    storeError.textContent = `Les favoris enregistrés n’ont pas pu être chargés : ${error.message}`;
+    storeError.hidden = false;
+    return new Set();
+  }
+}
+
 async function loadProducts() {
   const response = await fetch(new URL("products.json", document.baseURI));
   if (!response.ok) throw new Error("Le catalogue n'a pas pu être chargé.");
   const catalog = await response.json();
   if (!Array.isArray(catalog)) throw new Error("Le fichier products.json ne contient pas un catalogue valide.");
   products = catalog;
+  document.querySelector("#store-error").hidden = true;
+  state.favorites = loadFavorites();
   categories = ["Tout voir", ...new Set(products.map((product) => product.category))];
   if (!categories.includes(state.category)) state.category = "Tout voir";
-  document.querySelector("#store-error").hidden = true;
   renderCategories();
   renderProducts();
   renderCart();
@@ -65,24 +92,70 @@ function renderCategories() {
 
 function filteredProducts() {
   const query = state.search.trim().toLocaleLowerCase("fr");
-  return products.filter((product) => {
+  const matchingProducts = products.filter((product) => {
     const matchesCategory = state.category === "Tout voir" || product.category === state.category;
     const matchesSearch = !query || `${product.name} ${product.category} ${product.badge}`.toLocaleLowerCase("fr").includes(query);
-    return matchesCategory && matchesSearch;
+    const matchesFavorites = !state.favoritesOnly || state.favorites.has(product.id);
+    return matchesCategory && matchesSearch && matchesFavorites;
   });
+
+  if (state.sort === "price-ascending") matchingProducts.sort((a, b) => a.publicPrice - b.publicPrice);
+  if (state.sort === "price-descending") matchingProducts.sort((a, b) => b.publicPrice - a.publicPrice);
+  if (state.sort === "name-ascending") matchingProducts.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  return matchingProducts;
+}
+
+function renderPagination(pageCount) {
+  const pagination = document.querySelector("#catalog-pagination");
+  pagination.hidden = pageCount <= 1;
+  if (pagination.hidden) {
+    pagination.innerHTML = "";
+    return;
+  }
+
+  const pageButtons = Array.from({ length: pageCount }, (_, index) => {
+    const page = index + 1;
+    const current = page === state.page;
+    return `<button class="page-button${current ? " active" : ""}" type="button" data-page="${page}" aria-label="Page ${page}"${current ? ' aria-current="page"' : ""}>${page}</button>`;
+  }).join("");
+  pagination.innerHTML = `
+    <button class="page-button page-step" type="button" data-page="${state.page - 1}" aria-label="Page précédente"${state.page === 1 ? " disabled" : ""}>Précédent</button>
+    ${pageButtons}
+    <button class="page-button page-step" type="button" data-page="${state.page + 1}" aria-label="Page suivante"${state.page === pageCount ? " disabled" : ""}>Suivant</button>`;
 }
 
 function renderProducts() {
-  const visibleProducts = filteredProducts();
-  document.querySelector("#results-count").textContent = `${visibleProducts.length} article${visibleProducts.length === 1 ? "" : "s"}`;
-  document.querySelector("#empty-state").hidden = visibleProducts.length > 0;
-  productGrid.hidden = visibleProducts.length === 0;
+  const matchingProducts = filteredProducts();
+  const pageCount = Math.ceil(matchingProducts.length / PAGE_SIZE);
+  state.page = Math.min(state.page, Math.max(pageCount, 1));
+  const firstProductIndex = (state.page - 1) * PAGE_SIZE;
+  const visibleProducts = matchingProducts.slice(firstProductIndex, firstProductIndex + PAGE_SIZE);
+  document.querySelector("#results-count").textContent = `${matchingProducts.length} article${matchingProducts.length === 1 ? "" : "s"}`;
+  document.querySelector("#empty-state").hidden = matchingProducts.length > 0;
+  productGrid.hidden = matchingProducts.length === 0;
+  document.querySelector("#favorites-count").textContent = state.favorites.size;
+  document.querySelector("#favorites-count").hidden = state.favorites.size === 0;
+  document.querySelector("#favorites-toggle").setAttribute("aria-pressed", String(state.favoritesOnly));
+  document.querySelector("#empty-state-title").textContent = state.favoritesOnly
+    ? "Aucun favori pour le moment."
+    : "Pas de match pour cette recherche.";
+  document.querySelector("#empty-state-message").textContent = state.favoritesOnly
+    ? "Touchez le cœur d’un article pour le retrouver ici."
+    : "Essayez un autre mot ou choisissez une autre catégorie.";
+  document.querySelector("#reset-filters").textContent = state.favoritesOnly
+    ? "Voir tous les articles"
+    : "Réinitialiser les filtres";
+  renderPagination(pageCount);
   productGrid.innerHTML = visibleProducts.map((product, index) => {
+    const isFavorite = state.favorites.has(product.id);
     return `
       <article class="product-card">
         <div class="product-visual visual-${product.tone}">
           <div class="product-symbol">${symbolFor(product.art)}</div>
-          <div class="visual-caption"><span>${escapeHtml(product.badge)}</span><span>${String(index + 1).padStart(2, "0")} / ${String(visibleProducts.length).padStart(2, "0")}</span></div>
+          <div class="visual-caption"><span>${escapeHtml(product.badge)}</span><span>${String(firstProductIndex + index + 1).padStart(2, "0")} / ${String(matchingProducts.length).padStart(2, "0")}</span></div>
+          <button class="favorite-product${isFavorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${isFavorite ? "Retirer" : "Ajouter"} ${escapeHtml(product.name)} ${isFavorite ? "des" : "aux"} favoris" aria-pressed="${isFavorite}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+          </button>
         </div>
           <p class="product-category">${escapeHtml(product.category)}</p>
           <h3 class="product-name">${escapeHtml(product.name)}</h3>
@@ -131,6 +204,21 @@ function changeQuantity(id, change) {
   renderCart();
 }
 
+function toggleFavorite(id) {
+  if (!products.some((product) => product.id === id)) return;
+  if (state.favorites.has(id)) state.favorites.delete(id);
+  else state.favorites.add(id);
+
+  try {
+    localStorage.setItem("apollo-favorites", JSON.stringify([...state.favorites]));
+  } catch (error) {
+    const storeError = document.querySelector("#store-error");
+    storeError.textContent = `Ce favori ne pourra pas être conservé après fermeture du navigateur : ${error.message}`;
+    storeError.hidden = false;
+  }
+  renderProducts();
+}
+
 function openCart() {
   cartPanel.classList.add("is-open");
   cartPanel.setAttribute("aria-hidden", "false");
@@ -150,6 +238,8 @@ function closeCart() {
 function updateCategory(category) {
   if (!categories.includes(category)) return;
   state.category = category;
+  state.page = 1;
+  state.favoritesOnly = false;
   renderCategories();
   renderProducts();
 }
@@ -159,9 +249,45 @@ categoryList.addEventListener("click", (event) => {
   if (button) updateCategory(button.dataset.category);
 });
 
+document.querySelector("#catalog-pagination").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-page]");
+  if (!button || button.disabled) return;
+  state.page = Number(button.dataset.page);
+  renderProducts();
+  document.querySelector("#catalog-toolbar").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 productGrid.addEventListener("click", (event) => {
+  const favoriteButton = event.target.closest("[data-favorite]");
+  if (favoriteButton) {
+    toggleFavorite(favoriteButton.dataset.favorite);
+    return;
+  }
   const button = event.target.closest("[data-add]");
   if (button) changeQuantity(button.dataset.add, 1);
+});
+
+document.querySelector("#favorites-toggle").addEventListener("click", () => {
+  state.favoritesOnly = !state.favoritesOnly;
+  state.category = "Tout voir";
+  state.page = 1;
+  searchInput.value = "";
+  state.search = "";
+  renderCategories();
+  renderProducts();
+  document.querySelector("#boutique").scrollIntoView({ behavior: "smooth" });
+});
+
+const accountDialog = document.querySelector("#account-dialog");
+document.querySelector("#open-account").addEventListener("click", () => {
+  accountDialog.showModal();
+  document.querySelector("#account-email").focus();
+});
+document.querySelector("#close-account").addEventListener("click", () => accountDialog.close());
+accountDialog.addEventListener("close", () => document.querySelector("#open-account").focus());
+document.querySelector("#account-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  document.querySelector("#account-message").textContent = "La connexion en ligne n’est pas encore disponible.";
 });
 
 document.querySelector("#cart-items").addEventListener("click", (event) => {
@@ -190,12 +316,20 @@ document.querySelector(".main-nav").addEventListener("click", (event) => {
 
 searchInput.addEventListener("input", () => {
   state.search = searchInput.value;
+  state.page = 1;
+  renderProducts();
+});
+
+document.querySelector("#sort-select").addEventListener("change", (event) => {
+  state.sort = event.currentTarget.value;
+  state.page = 1;
   renderProducts();
 });
 
 document.querySelector("#reset-filters").addEventListener("click", () => {
   searchInput.value = "";
   state.search = "";
+  state.favoritesOnly = false;
   updateCategory("Tout voir");
 });
 document.querySelector("#menu-toggle").addEventListener("click", (event) => {

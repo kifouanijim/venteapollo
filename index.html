@@ -38,6 +38,15 @@
       </nav>
 
       <div class="header-actions">
+        <button class="header-action" id="favorites-toggle" type="button" aria-label="Afficher mes favoris" aria-controls="boutique" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+          <span class="header-action-label">Favoris</span>
+          <span class="header-action-count" id="favorites-count" hidden>0</span>
+        </button>
+        <button class="header-action" id="open-account" type="button" aria-label="Ouvrir mon compte" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="header-action-label">Compte</span>
+        </button>
         <button class="cart-button" id="open-cart" type="button" aria-label="Ouvrir le panier de démonstration" aria-controls="cart-panel">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.5a2 2 0 0 0 1.9-1.4L22 9H7M10 21h.01M18 21h.01"/></svg>
           <span>Panier</span>
@@ -87,15 +96,20 @@
       </section>
 
       <section class="shop-section" id="boutique">
+        <nav class="breadcrumbs" aria-label="Fil d’Ariane">
+          <a href="#">Accueil</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">Boutique</span>
+        </nav>
         <div class="shop-heading">
           <div>
             <div class="eyebrow"><span class="eyebrow-line"></span> LA SÉLECTION DU CLUB</div>
             <h2>TOUT CE QU’IL<br>FAUT <span>POUR Y ALLER.</span></h2>
           </div>
-          <p class="shop-intro">Un aperçu de l’équipement et des essentiels disponibles au club. Pour les disponibilités, renseignez-vous directement auprès d’Apollo.</p>
+          <p class="shop-intro">Gants, protections et essentiels sélectionnés par le club pour vos entraînements. Les prix et disponibilités sont à confirmer auprès d’Apollo.</p>
         </div>
 
-        <div class="catalog-toolbar">
+        <div class="catalog-toolbar" id="catalog-toolbar">
           <div class="category-list" id="category-list" aria-label="Filtrer par catégorie"></div>
           <label class="search-box">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
@@ -106,14 +120,24 @@
         <p class="store-error" id="store-error" role="alert" hidden></p>
         <div class="catalog-meta">
           <p id="results-count" aria-live="polite"></p>
-          <p class="catalog-note"><span aria-hidden="true">✳</span> Prix indicatifs, à confirmer auprès du club</p>
+          <label class="catalog-sort">
+            <span>Trier par</span>
+            <select id="sort-select" aria-label="Trier les articles">
+              <option value="featured">Sélection du club</option>
+              <option value="price-ascending">Prix croissant</option>
+              <option value="price-descending">Prix décroissant</option>
+              <option value="name-ascending">Nom A à Z</option>
+            </select>
+          </label>
         </div>
+        <p class="catalog-note"><span aria-hidden="true">✳</span> Prix indicatifs, à confirmer auprès du club</p>
 
         <div class="product-grid" id="product-grid" aria-live="polite"></div>
+        <nav class="catalog-pagination" id="catalog-pagination" aria-label="Pagination du catalogue" hidden></nav>
         <div class="empty-state" id="empty-state" hidden>
           <span aria-hidden="true">↗</span>
-          <h3>Pas de match pour cette recherche.</h3>
-          <p>Essayez un autre mot ou choisissez une autre catégorie.</p>
+          <h3 id="empty-state-title">Pas de match pour cette recherche.</h3>
+          <p id="empty-state-message">Essayez un autre mot ou choisissez une autre catégorie.</p>
           <button class="text-button" id="reset-filters" type="button">Voir tous les articles</button>
         </div>
       </section>
@@ -160,5 +184,24 @@
         <button class="button button-disabled" type="button" disabled>Commande bientôt disponible</button>
       </div>
     </aside>
+
+    <dialog class="account-dialog" id="account-dialog" aria-labelledby="account-title">
+      <div class="account-dialog-header">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> ESPACE MEMBRE</p>
+          <h2 id="account-title">VOTRE <span>COMPTE.</span></h2>
+        </div>
+        <button class="close-cart" id="close-account" type="button" aria-label="Fermer la fenêtre du compte">×</button>
+      </div>
+      <p class="account-notice">La connexion en ligne n’est pas encore activée. Vos favoris restent enregistrés sur cet appareil.</p>
+      <form class="account-form" id="account-form">
+        <label for="account-email">Adresse e-mail</label>
+        <input id="account-email" name="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required>
+        <label for="account-password">Mot de passe</label>
+        <input id="account-password" name="password" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required>
+        <button class="button button-dark" type="submit">Se connecter <span aria-hidden="true">↗</span></button>
+        <p class="account-message" id="account-message" role="status" aria-live="polite"></p>
+      </form>
+    </dialog>
   </body>
 </html>
